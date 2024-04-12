@@ -11,7 +11,7 @@ from proportional import ProportionalPolicy
 
 class Gavel(SchedulingPolicy):
     """
-    Implement Gavels Maxmin Fairness Policy1
+    Implement Gavels Maxmin Fairness Policy
     """
 
     def __init__(self, args, **kwargs):

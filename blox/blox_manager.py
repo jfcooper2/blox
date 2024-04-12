@@ -246,11 +246,30 @@ class BloxManager(object):
         # )
         # )
 
+        BASENAME = f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_load_{self.load}"
+        #BASENAME = f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_{self.scheduler_name}_{self.placement_name}_{self.acceptance_policy}_load_{self.load}"
+
         if all(jid in job_state.finished_job for jid in job_state.job_ids_to_track):
-            with open(
-                f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_{self.scheduler_name}_{self.acceptance_policy}_load_{self.load}_job_stats.json",
-                "w",
-            ) as fopen:
+            dir1 = "results"
+            dir2 = dir1 + "/" + self.acceptance_policy.lower()
+            dir3 = dir2 + "/" + self.placement_name.lower()
+            dir4 = dir3 + "/" + self.scheduler_name.lower()
+
+            if dir1.split("/")[-1] not in os.listdir():
+                os.mkdir(dir1)
+
+            if dir2.split("/")[-1] not in os.listdir(dir1):
+                os.mkdir(dir2)
+
+            if dir3.split("/")[-1] not in os.listdir(dir2):
+                os.mkdir(dir3)
+
+            if dir4.split("/")[-1] not in os.listdir(dir3):
+                os.mkdir(dir4)
+
+            BASENAME = dir4 + "/" + BASENAME
+
+            with open(BASENAME + "_job_stats.json", "w") as fopen:
                 # fopen.write(json.dumps(self.job_completion_stats))
                 avg_jct = self._get_avg_jct(job_state.job_completion_stats)
                 print(
@@ -258,24 +277,15 @@ class BloxManager(object):
                 )
                 json.dump(job_state.job_completion_stats, fopen)
 
-            with open(
-                f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_{self.scheduler_name}_{self.acceptance_policy}_load_{self.load}_cluster_stats.json",
-                "w",
-            ) as fopen:
+            with open(BASENAME + "_cluster_stats.json", "w") as fopen:
                 # fopen.write(json.dumps(self.cluster_stats))
                 json.dump(cluster_state.cluster_stats, fopen)
-            # sys.exit(0)
-            with open(
-                f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_{self.scheduler_name}_{self.acceptance_policy}_load_{self.load}_run_time_stats.json",
-                "w",
-            ) as fopen:
+
+            with open(BASENAME + "_run_time_stats.json","w") as fopen:
                 # fopen.write(json.dumps(self.cluster_stats))
                 json.dump(job_state.job_runtime_stats, fopen)
 
-            with open(
-                f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_{self.scheduler_name}_{self.acceptance_policy}_load_{self.load}_responsivness.json",
-                "w",
-            ) as fopen:
+            with open(BASENAME + "_responsiveness.json","w") as fopen:
                 # fopen.write(json.dumps(self.cluster_stats))
                 avg_responsiveness = self._get_avg_jct(
                     job_state.job_responsiveness_stats
@@ -284,10 +294,8 @@ class BloxManager(object):
                     f"Scheduler: {self.scheduler_name}, Acceptance Policy: {self.acceptance_policy}, Load: {self.load}, Avg responsiveness {avg_responsiveness}"
                 )
                 json.dump(job_state.job_responsiveness_stats, fopen)
-            with open(
-                f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_{self.scheduler_name}_{self.acceptance_policy}_load_{self.load}_custom_metrics.json",
-                "w",
-            ) as fopen:
+
+            with open(BASENAME + "_custom_metric.json","w") as fopen:
                 # fopen.write(json.dumps(self.cluster_stats))
                 json.dump(job_state.custom_metrics, fopen)
 

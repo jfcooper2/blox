@@ -3,3 +3,8 @@ from .las import *
 from .srtf import *
 from .optimus import *
 from .tiresias import *
+#from .scheduler_fifo import *
+#from .scheduler_las import *
+#from .scheduler_srtf import *
+#from .scheduler_optimus import *
+#from .scheduler_tiresias import *

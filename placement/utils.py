@@ -1,6 +1,7 @@
 import pandas as pd
+from typing import Tuple, List
 
-
+# Gavel get job ids sorted by vals
 def get_ids_sorted_by_priorities(priority_vals: dict) -> list:
     """
     Sorts the dict by value and return a sorted list in descending order of
