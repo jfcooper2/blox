@@ -8,11 +8,9 @@ import argparse
 import pandas as pd
 import time
 from concurrent import futures
+from itertools import cycle
 
 from typing import Tuple, List
-
-# import scheduler
-# import placement
 
 from blox_manager import BloxManager
 
@@ -32,6 +30,8 @@ class ClusterState(object):
         self.node_counter = 0
         # number of GPUs
         self.gpu_number = 0
+        # types of GPU to create, cycles through as they are created
+        self.gpu_types = cycle(['V100', 'P100', 'K80'])
         # gpu dataframe for easy slicing
         self.gpu_df = pd.DataFrame(
             columns=[
@@ -42,6 +42,7 @@ class ClusterState(object):
                 "IP_addr",
                 "IN_USE",
                 "JOB_IDS",
+                "GPU_TYPE"
             ]
         )
         self.time = 0
@@ -74,6 +75,7 @@ class ClusterState(object):
                     for local_gpu_id, gpu_uuid in zip(
                         range(numGPUs_on_node), gpu_uuid_list
                     ):
+                        gpu_type = next(self.gpu_types)
                         gpuID_list.append(
                             {
                                 "GPU_ID": self.gpu_number,
@@ -83,6 +85,7 @@ class ClusterState(object):
                                 "IP_addr": node_info["ipaddr"],
                                 "IN_USE": False,
                                 "JOB_IDS": None,
+                                "GPU_TYPE": gpu_type
                             }
                         )
                         self.gpu_number += 1

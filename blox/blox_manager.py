@@ -8,6 +8,7 @@ import logging
 import argparse
 import pandas as pd
 import time
+import numpy as np
 from concurrent import futures
 
 from typing import Tuple, List
@@ -127,7 +128,8 @@ class BloxManager(object):
             self.round_duration,
             job_state.active_jobs,
         )
-        print("Metric Data {}".format(metric_data))
+        # TODO might have to uncomment
+        # print("Metric Data {}".format(metric_data))
 
         job_state.update_metrics(metric_data, self.round_duration)
         # prune jobs which have been completed
@@ -213,6 +215,7 @@ class BloxManager(object):
             "jobs_running": jobs_running,
             "free_gpus": free_gpus,
             "gpu_demand": gpu_demand,
+            # "gpu_df": cluster_state.gpu_df
         }
 
         #
@@ -249,7 +252,7 @@ class BloxManager(object):
         BASENAME = f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_load_{self.load}"
         #BASENAME = f"{self.exp_prefix}_{job_state.job_ids_to_track[0]}_{job_state.job_ids_to_track[-1]}_{self.scheduler_name}_{self.placement_name}_{self.acceptance_policy}_load_{self.load}"
 
-        if all(jid in job_state.finished_job for jid in job_state.job_ids_to_track):
+        if not any(cluster_state.gpu_df["IN_USE"]) and all(jid in job_state.finished_job for jid in job_state.job_ids_to_track):
             dir1 = "results"
             dir2 = dir1 + "/" + self.acceptance_policy.lower()
             dir3 = dir2 + "/" + self.placement_name.lower()
@@ -337,6 +340,9 @@ class BloxManager(object):
         terminate_ipaddr = list()
         terminate_simulation = list()
         print("Job IDs to terminate {}".format(jobs_to_terminate))
+        #if len(active_jobs.active_jobs) > 0:
+        #    print(active_jobs.active_jobs)
+        #    sys.exit(1)
         for jid in jobs_to_terminate:
             # find ipaddresses for corresponding jobs to terminate
             running_ipddr = list(
@@ -370,6 +376,12 @@ class BloxManager(object):
             self.comm_node_manager.launch_job(
                 jid, active_jobs.active_jobs[jid], local_gpu_ids, ipaddress_to_launch
             )
+            job = active_jobs.active_jobs[jid]
+            gpus = cluster_state.gpu_df["GPU_TYPE"].values
+            active_jobs.active_jobs[jid]["job_gpu_iteration_time"] = 0
+            for gpu in gpus[gpus_to_launch]:
+                active_jobs.active_jobs[jid]["job_gpu_iteration_time"] += job["gpu_tputs"][gpu]
+
             active_jobs.active_jobs[jid]["is_running"] = True
             active_jobs.active_jobs[jid]["rank_0_ip"] = list(set(ipaddress_to_launch))
 

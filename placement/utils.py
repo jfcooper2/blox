@@ -54,7 +54,7 @@ def find_free_GPUs_by_type(gpu_df: pd.DataFrame, gpu_type: str) -> dict:
     dict : {Node_ID : [list of free GPUs]}
     """
     return (
-        gpu_df.loc[(gpu_df["IN_USE"] == False) & (gpu_df["GPU_type"] == gpu_type)]
+        gpu_df.loc[(gpu_df["IN_USE"] == False) & (gpu_df["GPU_TYPE"] == gpu_type)]
         .groupby("Node_ID")["GPU_ID"]
         .apply(list)
         .to_dict()

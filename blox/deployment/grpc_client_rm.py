@@ -214,6 +214,7 @@ class ResourceManagerComm(object):
                 # "8.0": total_gpus[7],
                 # "9.0": total_gpus[8],
                 # }
+                #print(metric_data)
                 if active_job_dict[job_id]["previously_launched"] == False:
                     active_job_dict[job_id]["job_launched_first_time"] = True
                 if active_job_dict[job_id]["previously_launched"] == True:
@@ -221,9 +222,19 @@ class ResourceManagerComm(object):
 
                 active_job_dict[job_id]["previously_launched"] = True
 
-                total_iterations_in_round = (
-                    round_duration / active_job_dict[job_id]["job_iteration_time"]
-                )
+                if active_job_dict[job_id]["job_gpu_iteration_time"] == 0:
+                    total_iterations_in_round = (
+                        round_duration / active_job_dict[job_id]["job_iteration_time"]
+                    )
+                else:
+                    # If we are using gpus, we should have some acceleration based on 
+                    # which GPUs we are using. 
+                    total_iterations_in_round = (
+                        round_duration \
+                            * active_job_dict[job_id]["job_gpu_iteration_time"] \
+                            / active_job_dict[job_id]["job_iteration_time"]
+                            #/ active_job_dict[job_id]["job_gpu_demand"] \
+                    )
                 attained_service = (
                     active_job_dict[job_id]["tracked_metrics"]["attained_service"]
                     + round_duration
@@ -255,16 +266,11 @@ class ResourceManagerComm(object):
                     "job_executed_iteration"
                 ] = total_iteration_achieved
 
+                metric_data_dict[job_id] = {
+                    "attained_service": attained_service,
+                    "per_iter_time": per_iteration_time,
+                }
                 if job_exit == True:
-                    metric_data_dict[job_id] = {
-                        "attained_service": attained_service,
-                        "per_iter_time": per_iteration_time,
-                        "job_exit": True,
-                    }
-                if not job_exit:
-                    metric_data_dict[job_id] = {
-                        "attained_service": attained_service,
-                        "per_iter_time": per_iteration_time,
-                    }
+                    metric_data_dict[job_id]["job_exit"] = True
 
         return metric_data_dict

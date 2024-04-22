@@ -1,0 +1,4 @@
+conda create --name blox
+conda activate blox
+conda install --file requirements.txt
+conda install -c conda-forge cvxpy

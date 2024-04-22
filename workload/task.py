@@ -1,5 +1,8 @@
-import os
+# task.py
+# 
+
 from enum import Enum
+import os
 import random
 
 class TaskName(Enum):
@@ -17,14 +20,16 @@ class TaskName(Enum):
         else:
             return "UNKNOWN"
 
-''' Task characteristics
-    - task_name 
-'''
+""" 
+Task characteristics
+- task_name 
+"""
 class Task():
     def __init__(
         self,
         task_name,
         task_percent):
+
         self.task_name = task_name 
         self.task_percent = task_percent
         self.total_jobs = 0

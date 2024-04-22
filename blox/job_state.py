@@ -64,6 +64,8 @@ class JobState(object):
         """
         for jid in self.active_jobs:
             if self.active_jobs[jid]["is_running"] == True:
+                # TODO this might have to be uncommented
+                print(self.active_jobs[jid])
                 if len(metric_data.get(jid)) > 0:
                     # replace only when we have got metrics
                     # add scheduler side metrics
@@ -97,6 +99,9 @@ class JobState(object):
                     # self.active_jobs[jid]["tracked_metrics"].update(
                     # {"job_exit": True}
                     # )
+
+        #if(metric_data != {}):
+        #    exit(1)
         return None
 
     def add_new_jobs(self, new_jobs: List[dict]) -> None:

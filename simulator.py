@@ -87,6 +87,7 @@ class SimulatorRunner(simulator_pb2_grpc.SimServerServicer):
         # first_job_config = self.simulator_config.pop(0)
         # self.workload = self._generate_workload(first_job_config)
 
+        self.simulation_duration = 100000
         self.random_seed = 1
         self.exp_prefix = exp_prefix
 
@@ -127,6 +128,11 @@ class SimulatorRunner(simulator_pb2_grpc.SimServerServicer):
         Return a dictionary of jobs for simulating.
         """
         simulator_time = request.value
+        if simulator_time > self.simulation_duration:
+            ret = rm_pb2.JsonResponse()
+            ret.response = "{}"
+            return ret
+
         job_to_run_dict = dict()
         jcounter = 0
         print("Simulator time {}".format(simulator_time))
@@ -295,6 +301,8 @@ class SimulatorRunner(simulator_pb2_grpc.SimServerServicer):
         # new_job["job_total_iteration"] = new_job_time
         # new_job["job_duration"] = new_job_time
         new_job["simulation"] = True
+        #print(new_job)
+        #sys.exit(1)
         new_job["submit_time"] = new_job["job_arrival_time"]
         # temporary fix not sure why this is happening though
         if "logger" in new_job:
@@ -413,7 +421,7 @@ def parse_args(parser):
         "--scheduler", type=str, default="Las", help="Name of the scheduler"
     )
     parser.add_argument(
-        "--placement", type=str, default="Default", help="Name of the placement policy"
+        "--placement", type=str, default="Gavel", help="Name of the placement policy"
     )
 
     parser.add_argument(
@@ -433,12 +441,13 @@ def launch_server(args) -> grpc.Server:
 
     simulator_pb2_grpc.add_SimServerServicer_to_server(
         SimulatorRunner(
-            args.cluster_job_log,
-            np.arange(10, 11, 1.0).tolist(),
-            (args.start_job_track, args.end_job_track),
-            [args.scheduler],
-            [args.placement],
-            ["AcceptAll"],
+            cluster_job_log=args.cluster_job_log,
+            list_jobs_per_hour=[10],
+            # list_jobs_per_hour=np.arange(10, 11, 1.0).tolist(),
+            job_ids_to_track=(args.start_job_track, args.end_job_track),
+            schedulers=[args.scheduler],
+            placement_policies=[args.placement],
+            acceptance_policies=["AcceptAll"],
             exp_prefix=args.exp_prefix,
         ),
         server,

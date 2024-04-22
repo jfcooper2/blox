@@ -6,6 +6,8 @@ import logging
 import numpy as np
 import pandas as pd
 
+import traceback
+
 
 sys.path.append(os.path.dirname(__file__))
 print(sys.path)
@@ -48,7 +50,7 @@ class Workload(object):
     ):
         if trace is not None:
             self.workload_type = "replay"
-        elif cluster_job_log is None:
+        elif len(cluster_job_log) == 0:
             self.workload_type = "synthetic"
         else:
             self.workload_type = "philly"
@@ -109,70 +111,42 @@ class Workload(object):
         small_trace=False,
     ):
         jobs = []
-        if not sum_attempts:
-            if small_trace and not multigpu:
-                fname = "philly_jobs_no_sum_attempts_static_single.pickle"
-            elif small_trace and multigpu:
-                fname = "philly_jobs_no_sum_attempts_static_multi.pickle"
-            elif exponential and debug_multi:
-                fname = "philly_jobs_no_sum_attempts_exp_multidebug.pickle"
-            elif not exponential and debug_multi:
-                fname = "philly_jobs_no_sum_attempts_multidebug.pickle"
-            elif exponential and multigpu:
-                fname = "philly_jobs_no_sum_attempts_exp_multi.pickle"
-            elif exponential and not multigpu:
-                fname = "philly_jobs_no_sum_attempts_exp_single.pickle"
-            elif not exponential and not multigpu:
-                fname = "philly_jobs_no_sum_attempts_single.pickle"
-            elif not exponential and multigpu:
-                fname = "philly_jobs_no_sum_attempts_multi.pickle"
-            else:
-                fname = "philly_jobs_no_sum_attempts.pickle"
-
-            if os.path.exists(fname):
-                jobs = pickle.load(open(fname, "rb"))
-            else:
-                jobs = parse_philly_jobs.parse_jobs(
-                    cluster_job_log,
-                    sum_attempts,
-                    exponential,
-                    multigpu,
-                    debug_multi,
-                    small_trace,
-                )
-                pickle.dump(jobs, open(fname, "wb"))
+        if sum_attempts:
+            BASENAME = "philly_jobs_sum_attempts"
         else:
-            if small_trace and not multigpu:
-                fname = "philly_jobs_sum_attempts_static_single.pickle"
-            elif small_trace and multigpu:
-                fname = "philly_jobs_sum_attempts_static_multi.pickle"
-            elif exponential and debug_multi:
-                fname = "philly_jobs_sum_attempts_exp_multidebug.pickle"
-            elif not exponential and debug_multi:
-                fname = "philly_jobs_sum_attempts_multidebug.pickle"
-            elif exponential and multigpu:
-                fname = "philly_jobs_sum_attempts_exp_multi.pickle"
-            elif exponential and not multigpu:
-                fname = "philly_jobs_sum_attempts_exp_single.pickle"
-            elif not exponential and not multigpu:
-                fname = "philly_jobs_sum_attempts_single.pickle"
-            elif not exponential and multigpu:
-                fname = "philly_jobs_sum_attempts_multi.pickle"
-            else:
-                fname = "philly_jobs_sum_attempts.pickle"
+            BASENAME = "philly_jobs_no_sum_attempts"
 
-            if os.path.exists(fname):
-                jobs = pickle.load(open(fname, "rb"))
-            else:
-                jobs = parse_philly_jobs.parse_jobs(
-                    cluster_job_log,
-                    sum_attempts,
-                    exponential,
-                    multigpu,
-                    debug_multi,
-                    small_trace,
-                )
-                pickle.dump(jobs, open(fname, "wb"))
+        if small_trace and not multigpu:
+            fname = BASENAME + "_static_single.pickle"
+        elif small_trace and multigpu:
+            fname = BASENAME + "_static_multi.pickle"
+        elif exponential and debug_multi:
+            fname = BASENAME + "_exp_multidebug.pickle"
+        elif not exponential and debug_multi:
+            fname = BASENAME + "_multidebug.pickle"
+        elif exponential and multigpu:
+            fname = BASENAME + "_exp_multi.pickle"
+        elif exponential and not multigpu:
+            fname = BASENAME + "_exp_single.pickle"
+        elif not exponential and not multigpu:
+            fname = BASENAME + "_single.pickle"
+        elif not exponential and multigpu:
+            fname = BASENAME + "_multi.pickle"
+        else:
+            fname = BASENAME + ".pickle"
+
+        if os.path.exists(fname):
+            jobs = pickle.load(open(fname, "rb"))
+        else:
+            jobs = parse_philly_jobs.parse_jobs(
+                cluster_job_log,
+                sum_attempts,
+                exponential,
+                multigpu,
+                debug_multi,
+                small_trace,
+            )
+            pickle.dump(jobs, open(fname, "wb"))
 
         return jobs
 
@@ -293,6 +267,10 @@ class Workload(object):
         total_gpu_demand.plot_step()
         total_job_durations.plot_cdf()
 
+    """
+    Generate jobs one at a time, based on the previous job time 
+    since jobs are assumed to arrive based on a Poisson distribution
+    """
     def generate_next_job(self, last_job_arrival_time, arrival=-1):
         if self.workload_type == "philly":
             job = self.jobs[self.job_id % self.total_jobs]
@@ -320,20 +298,12 @@ class Workload(object):
             # job_total_iteration = get_total_iteration(5000, 50000)
             # job_total_iteration = get_total_iteration(360, 1080)
             job_gpu_demand = get_job_gpu_demand()
-            job_packing_score = None
-            job_placement_score = None
-            synergy_res_matrix = None
-            synergy_storage_matrix = None
             job = Job(
                 job_id,
                 job_arrival_time,
                 job_iteration_time,
                 job_total_iteration,
                 job_gpu_demand,
-                job_packing_score,
-                job_placement_score,
-                synergy_res_matrix,
-                synergy_storage_matrix,
                 tenant_id,
                 iter_is_duration=True,
             )
@@ -366,6 +336,10 @@ class Workload(object):
     def get_current_job_id(self):
         return self.job_id
 
+    """
+    Generate a 4-day long, Poisson-distributed collection of
+    job arrival times.
+    """
     def online_workload(self, jobs_per_hour):
         num_hours = 24 * 4
         num_jobs = int(math.ceil(jobs_per_hour)) * num_hours
@@ -387,16 +361,14 @@ class Workload(object):
         jobs = []
         for job_id in job_ids:
             job = Job(
-                job_id,
-                job_arrival_times[job_id],
-                job_iteration_times[job_id],
-                job_total_iterations[job_id],
-                job_gpu_demands[job_id],
-                job_packing_scores[job_id],
-                job_placement_scores[job_id],
-                None,
-                None,
-                tenant_id,
+                job_id=job_id,
+                job_arrival_time=job_arrival_times[job_id],
+                job_iteration_time=job_iteration_times[job_id],
+                job_total_iteraion=job_total_iterations[job_id],
+                job_gpu_demand=job_gpu_demands[job_id],
+                job_packing_penalty=job_packing_scores[job_id],
+                job_placement_penalty=job_placement_scores[job_id],
+                tenant_id=tenant_id,
             )
             jobs.append(job)
         return jobs
@@ -408,17 +380,12 @@ class Workload(object):
             for line in fr:
                 job_stats = line.strip().split(",")
                 job = Job(
-                    int(job_stats[0]),
-                    float(job_stats[2]),
-                    1,
-                    int(job_stats[3]),
-                    # 1,
-                    int(job_stats[4]),
-                    None,
-                    None,
-                    None,
-                    None,
-                    0,
+                    job_id=int(job_stats[0]),
+                    job_arrival_time=float(job_stats[2]),
+                    job_iteraion_time=1,
+                    job_total_iteraion=int(job_stats[3]),
+                    job_gpu_demand=int(job_stats[4]),
+                    tenant_id=0,
                     iter_is_duration=False,
                 )
                 job.job_task, job.job_class_id = self.model_zoo.get_job_class_by_name(
@@ -428,7 +395,13 @@ class Workload(object):
                 jobs.append(job)
         return jobs
 
+    """
+    Create a fixed list of jobes where everything arrives at the
+    same time and all iterations take 1 second to run.
+    """
     def default_workload(self, jobs=5):
+        #traceback.print_stack()
+        #sys.exit(1)
         tenant_id = 0
         num_jobs = jobs
         job_ids = np.arange(num_jobs)
@@ -439,21 +412,16 @@ class Workload(object):
         # job_total_iterations = [2000]
         job_total_iterations = [2000] * num_jobs
         job_gpu_demands = [1] * num_jobs
-        # job_gpu_demands = [1]*num_jobs
 
         jobs = []
         for job_id in job_ids:
             job = Job(
-                job_id,
-                job_arrival_times[job_id],
-                job_iteration_times[job_id],
-                job_total_iterations[job_id],
-                job_gpu_demands[job_id],
-                None,
-                None,
-                None,
-                None,
-                tenant_id,
+                job_id=job_id,
+                job_arrival_time=job_arrival_times[job_id],
+                job_iteraion_time=job_iteration_times[job_id],
+                job_total_iteration=job_total_iterations[job_id],
+                job_gpu_demand=job_gpu_demands[job_id],
+                tenant_id=tenant_id,
                 iter_is_duration=True,
             )
             jobs.append(job)

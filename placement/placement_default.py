@@ -119,3 +119,4 @@ class PlacementDefault(Placement):
                 # print(f"Jobs in queue {len(job_order)-idx}")
                 break
         return (jobs_to_terminate, jobs_to_launch)
+

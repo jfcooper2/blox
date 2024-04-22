@@ -2,6 +2,7 @@ import warnings
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 import os
+import sys
 import argparse
 import schedulers
 # from placement import placement
@@ -16,7 +17,7 @@ import blox.utils as utils
 def main(args):
     admission_policy = admission_control.acceptAll(args)
     placement_policy = placement.Placement(args)
-    scheduling_policy = schedulers.Las(args)
+    scheduling_policy = schedulers.Tiresias(args)
 
     # blox_mgr = BloxManager(args)
 
@@ -107,11 +108,14 @@ def main(args):
                     cluster_state,
                     job_state,
                 )
-                print("GPU Df {}".format(cluster_state.gpu_df))
+                # print("GPU Df {}".format(cluster_state.gpu_df["JOB_IDS"]))
+                print("GPU Df {}".format(cluster_state.gpu_df.loc[cluster_state.gpu_df["JOB_IDS"].values != None]))
 
                 # Job Scheduling
                 job_state.add_new_jobs(accepted_jobs)
                 new_job_schedule = scheduling_policy.schedule(job_state, cluster_state)
+
+                
 
                 # Job Placement
                 to_suspend, to_launch = placement_policy.place(
@@ -171,7 +175,7 @@ def parse_args(parser):
 
     parser.add_argument(
         "--placement-name",
-        default="Default",
+        default="Gavel",
         type=str,
         help="Name of the scheduling strategy",
     )

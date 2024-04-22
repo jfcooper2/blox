@@ -2,6 +2,7 @@ import logging
 import math
 import collections
 import copy
+import utils
 
 def nested_add(orig_dict, new_dict):
     for key, val in new_dict.items():
@@ -26,44 +27,52 @@ class Job:
         job_iteration_time,
         job_total_iteration,
         job_gpu_demand,
-        job_packing_penalty,
-        job_placement_penalty,
-        synergy_res_matrix,
-        synergy_storage_matrix, 
         tenant_id,
+        job_packing_penalty=None,
+        job_placement_penalty=None,
+        synergy_res_matrix=None,
+        synergy_storage_matrix=None, 
         job_cpu_demand=-1,
         job_mem_demand=-1,
         job_sspeed_demand=-1,
         job_queueing_delay=0,
         cluster_id=0,
         job_priority=0,
-        iter_is_duration=False):
+        iter_is_duration=False,
+        gpu_tputs={}):
         # logger handle
         self.logger = logging.getLogger(__name__)
+
+        # TODO: TEMPORARY
+        gpu_tputs = utils.get_random_gpu_tputs()
 
         # job details
         self.job_id = job_id
         self.job_arrival_time = job_arrival_time
-        self.job_iteration_time = job_iteration_time
-        self.job_iteration_time_orig = job_iteration_time
         self.job_total_iteration = job_total_iteration
         self.job_duration = job_iteration_time * job_total_iteration
+
+        self.job_iteration_time = job_iteration_time
         self.job_gpu_demand = job_gpu_demand
+        self.job_gpu_iteration_time = 0
         self.job_cpu_demand = job_cpu_demand
         self.job_mem_demand = job_mem_demand
         self.job_sspeed_demand = job_sspeed_demand
 
+        self.job_iteration_time_orig = job_iteration_time
         self.job_gpu_demand_orig = job_gpu_demand
         self.job_cpu_demand_orig = job_cpu_demand
         self.job_mem_demand_orig = job_mem_demand
         self.job_sspeed_demand_orig = job_sspeed_demand
 
+        self.tenant_id = tenant_id
+
         self.job_packing_penalty = job_packing_penalty
         self.job_placement_penalty = job_placement_penalty
-        self.tenant_id = tenant_id
         self.job_queueing_delay = job_queueing_delay
         self.job_priority = job_priority
         self.iter_is_duration = iter_is_duration
+
         self.job_class_id = -1
         self.job_task = None
         self.job_model = None #Model object
@@ -73,7 +82,6 @@ class Job:
         self.current_round_iters = 0
         self.current_round_time = 0
         self.synergy_speedup = 1
-        self.tput = None
 
         # job state
         self.gpus = list()
@@ -92,9 +100,14 @@ class Job:
         self.lease_extended = False
         self.job_command = None
 
+        self.gpu_tputs = collections.defaultdict(lambda x: 1)
+        for k, v in gpu_tputs.items():
+            self.gpu_tputs[k] = v
+
         self.cpu_val = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:9, 7:12, 8:24}
         self.mem_val = {0:62.5, 1:125, 2:187.5, 3:250}
 
+    """
     def get_idx(self, id_map, value):
         for k,v in id_map.items():
             if value == v:
@@ -175,6 +188,7 @@ class Job:
         if time is not None:
             self.last_round_attained_time = self.attained_service_time
             self.attained_service_time += time
+
             progress_in_iteration = math.floor(time/job_iteration_time)
             self.last_round_progress = self.job_executed_iteration
             self.job_executed_iteration += progress_in_iteration
@@ -348,7 +362,6 @@ class Job:
             assert(_server.mem_true_utilization >= 0)
             assert(_server.sspeed_true_utilization >= 0)
   
- 
     def remove_unused_servers(self):
         serv_to_del = []
         for _server in self.res_map:
@@ -475,3 +488,4 @@ class Job:
             d['logger'] = logging.getLogger(d['logger'])
         self.__dict__.update(d)
 
+    """
