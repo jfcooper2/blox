@@ -8,6 +8,7 @@ from .utils import *
 
 class PlacementDefault(Placement):
     def __init__(self, args):
+        self.swap_count = 0 # Unused except for uniformity
         pass
 
     @staticmethod

@@ -65,7 +65,7 @@ class JobState(object):
         for jid in self.active_jobs:
             if self.active_jobs[jid]["is_running"] == True:
                 # TODO this might have to be uncommented
-                print(self.active_jobs[jid])
+                #print(self.active_jobs[jid])
                 if len(metric_data.get(jid)) > 0:
                     # replace only when we have got metrics
                     # add scheduler side metrics

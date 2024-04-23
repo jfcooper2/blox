@@ -11,15 +11,15 @@ def get_random_gpu_tputs():
         multiplier = 1
         t = 1
         r = random.random()
-        # if r < 0.8: t = 1
-        # elif r < 0.95: t = 0.5
-        # else: t = 0.2
+        if r < 0.8: t = 1
+        elif r < 0.95: t = 0.5
+        else: t = 0.2
         return t * multiplier
 
     tputs = {}
-    tputs['K80'] = 1 * rand_int()
-    tputs['V100'] = 4 * rand_int()
-    tputs['P100'] = 9 * rand_int()
+    tputs['K80'] = 0.5 * rand_int()
+    tputs['V100'] = 2 * rand_int()
+    tputs['P100'] = 4.5 * rand_int()
     return tputs
 
 def poisson_next_arrival_time(jobs_per_hour):

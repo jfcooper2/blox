@@ -15,9 +15,11 @@ class PlacementGavel(Placement):
         Note: not sure if necessary for Gavel
         """
         # TODO: Make this not depend on GPUs in multiple places
-        self.rounds_received = pd.DataFrame(index=["V100", "P100", "K80"])
-        self.throughputs = pd.DataFrame(index=["V100", "P100", "K80"])
+        self.gpu_types = ["V100", "P100", "K80"]
+        self.rounds_received = pd.DataFrame(index=self.gpu_types)
+        self.throughputs = pd.DataFrame(index=self.gpu_types)
         self.rounds_scheduled = 0
+        self.swap_count = 0
         pass # at the moment (2024/04/05), not sure if state is needed
 
     @Placement.copy_arguments
@@ -39,13 +41,14 @@ class PlacementGavel(Placement):
         jobs_to_terminate = list()
         jobs_to_launch = dict()
         launched_job_ids = list()
+        num_gpu_types = len(self.gpu_types)
 
         # TODO: Is this needed?
         if len(active_jobs) == 0 and len(job_order) == 0:
             return (jobs_to_terminate, jobs_to_launch)
 
-        if gpu_df.shape[1] < len(job_order):
-            curr_jobs = job_order[:gpu_df.shape[1]]
+        if gpu_df.shape[0] < len(job_order):
+            curr_jobs = job_order[:gpu_df.shape[0]]
         else:
             curr_jobs = job_order
         curr_jobs = [elem[0] for elem in curr_jobs]
@@ -53,26 +56,27 @@ class PlacementGavel(Placement):
         # Get the GPU throuputs into a nice dataframe
         for job in active_jobs.keys():
             if job not in self.throughputs.columns:
-                self.throughputs[job] = [0, 0, 0]
+                self.throughputs[job] = num_gpu_types * [0]
                 for gpu in self.throughputs.index:
                     self.throughputs[job][gpu] = active_jobs[job]["gpu_tputs"][gpu]
 
         # Make sure rounds received exists for each curr job
         for job in active_jobs.keys():
             if job not in self.rounds_received.columns:
-                self.rounds_received[job] = 3 * [0.01]
+                # Avoid floating point errors
+                self.rounds_received[job] = num_gpu_types * [0.01]
 
         # Get the jobs in rounds_received that are curr_jobs
         curr_throughputs = self.throughputs[curr_jobs]
         curr_rounds_received = self.rounds_received[curr_jobs].T
 
         # TODO: Make these smarter
-        curr_scale_factors = np.ones((len(curr_jobs), 3))
+        curr_scale_factors = np.ones((len(curr_jobs), num_gpu_types))
         curr_priority_weights = np.ones(len(curr_jobs))
 
         # TODO: THIS IS X
         curr_priorities = self.get_allocation(curr_throughputs.T, curr_scale_factors, curr_priority_weights, gpu_df)
-        # print(curr_priorities)
+        print(curr_priorities)
 
         # Make a list of tuples from priorities and loop over these
         job_names = curr_throughputs.columns
@@ -95,31 +99,56 @@ class PlacementGavel(Placement):
         # when a job is chosen to run, add it to this set
         placed_jobs = set()
 
-        # go over jobs in job order
-        for priority, (job_id, gpu_preference) in job_priorities:
+        # Start changing jobs
 
-            # check if job has already placed
-            # if so, ignore it and move on to the next tuple
+        # evict old jobs that scheduler 
+        for job_id in np.unique(gpu_df["JOB_IDS"].values[gpu_df["JOB_IDS"].values != None]):
+            if job_id not in curr_jobs:
+                print("-------------- EVICTING ----------------")
+                job = active_jobs[job_id]
+                jobs_to_terminate.append(job_id)
+                job["is_running"] = False
+                delete_job_by_id(gpu_df, job_id)
+
+        # find the best allocation according to gavel
+        gpu_counts = {gpu : 0 for gpu in self.gpu_types}
+        gpu_totals = {gpu : np.sum(gpu_df["GPU_TYPE"].values == gpu) for gpu in self.gpu_types}
+
+        curr_allocation = []
+        for priority, (job_id, gpu_preference) in job_priorities:
             if job_id in placed_jobs:
-                print(f'We have already placed {job_id}')
                 continue
+            if gpu_totals[gpu_preference] <= gpu_counts[gpu_preference]:
+                continue
+            placed_jobs.add(job_id)
+            gpu_counts[gpu_preference] += 1
+            curr_allocation.append((int(job_id), gpu_preference))
+
+            # Remove jobs on the wrong GPU to be rescheduled
+            if job_id in active_jobs.keys():
+                job = active_jobs[job_id]
+                if "running_accel" not in job.keys():
+                    continue
+                if job["running_accel"] != gpu_preference:
+                    jobs_to_terminate.append(job_id)
+                    job["is_running"] = False
+                    delete_job_by_id(gpu_df, job_id)
+                    print("-------------- SWAPPING ----------------")
+                    self.swap_count += 1
+
+
+        # place the jobs
+        for job_id, gpu_preference in curr_allocation:
 
             job = active_jobs[job_id]
             found = False
             if job["is_running"] == True:
                 if job["running_accel"] == gpu_preference:
                     # nothing to do here
-                    placed_jobs.add(job_id)
                     
                     # bookkeeping
                     self.rounds_received[job_id][gpu_preference] += 1
                     continue
-                else:
-                    # need to terminate this job trying to launch on
-                    # different accelerator
-                    jobs_to_terminate.append(job_id)
-                    job["is_running"] = False
-                    delete_job_by_id(gpu_df, job_id)
 
             if job_id in launched_job_ids:
                 # already launched the same ID in this round
@@ -203,7 +232,6 @@ class PlacementGavel(Placement):
                 mark_gpu_in_use(gpu_df, placement, job_id)
                 
                 # bookkeeping
-                placed_jobs.add(job_id)
                 self.rounds_received[job_id][gpu_preference]+= 1
             else:
                 break
@@ -261,12 +289,15 @@ class PlacementGavel(Placement):
             # )
         )
         # Make sure that the allocation can fit in the cluster.
+        gpu_quantities = np.array([np.sum(gpu_df["GPU_TYPE"].values == gpu_type) for gpu_type in self.gpu_types])
+
         constraints = [
             x >= 0,
             cp.sum(cp.multiply(
-                scale_factors, x), axis=0) <= gpu_df.shape[0] / 3,
+                scale_factors, x), axis=0) <= gpu_quantities,
             cp.sum(x, axis=1) <= 1,
         ]
+        print(gpu_quantities)
         cvxprob = cp.Problem(objective, constraints)
         result = cvxprob.solve()
         #result = cvxprob.solve(solver=self._solver)

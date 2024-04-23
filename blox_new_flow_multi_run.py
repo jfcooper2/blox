@@ -50,6 +50,10 @@ def main(args):
                 placement_policy = placement.PlacementDefault(args)
             elif args.placement_name == "Gavel":
                 placement_policy = placement.PlacementGavel(args)
+            elif args.placement_name == "Greedy":
+                placement_policy = placement.PlacementGreedy(args)
+            elif args.placement_name == "Best":
+                placement_policy = placement.PlacementBest(args)
             elif args.placement_name == "Bebop":
                 # 2024/04/12 This policy does NOT work lol
                 placement_policy = placement.PlacementBebop(args)
@@ -115,7 +119,7 @@ def main(args):
                 job_state.add_new_jobs(accepted_jobs)
                 new_job_schedule = scheduling_policy.schedule(job_state, cluster_state)
 
-                
+                print(f'swap count: {placement_policy.swap_count}')
 
                 # Job Placement
                 to_suspend, to_launch = placement_policy.place(
@@ -133,7 +137,6 @@ def main(args):
                     blox_mgr.time += args.round_duration
                     job_state.time += args.round_duration
                     # admission_policy.bltime += args.round_duration
-
 
 def parse_args(parser):
     """

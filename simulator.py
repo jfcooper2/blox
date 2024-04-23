@@ -87,7 +87,6 @@ class SimulatorRunner(simulator_pb2_grpc.SimServerServicer):
         # first_job_config = self.simulator_config.pop(0)
         # self.workload = self._generate_workload(first_job_config)
 
-        self.simulation_duration = 100000
         self.random_seed = 1
         self.exp_prefix = exp_prefix
 
@@ -128,7 +127,8 @@ class SimulatorRunner(simulator_pb2_grpc.SimServerServicer):
         Return a dictionary of jobs for simulating.
         """
         simulator_time = request.value
-        if simulator_time > self.simulation_duration:
+        
+        if self.prev_job != None and self.prev_job["job_id"] > self.job_ids_to_track[1]:
             ret = rm_pb2.JsonResponse()
             ret.response = "{}"
             return ret
@@ -442,7 +442,7 @@ def launch_server(args) -> grpc.Server:
     simulator_pb2_grpc.add_SimServerServicer_to_server(
         SimulatorRunner(
             cluster_job_log=args.cluster_job_log,
-            list_jobs_per_hour=[10],
+            list_jobs_per_hour=[50],
             # list_jobs_per_hour=np.arange(10, 11, 1.0).tolist(),
             job_ids_to_track=(args.start_job_track, args.end_job_track),
             schedulers=[args.scheduler],
