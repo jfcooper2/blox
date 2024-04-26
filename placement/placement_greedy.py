@@ -58,7 +58,7 @@ class PlacementGreedy(Placement):
         # Get the GPU throuputs into a nice dataframe
         for job in active_jobs.keys():
             if job not in self.throughputs.columns:
-                self.throughputs[job] = num_gpu_types * [0]
+                self.throughputs[job] = num_gpu_types * [0.0]
                 for gpu in self.throughputs.index:
                     self.throughputs[job][gpu] = active_jobs[job]["gpu_tputs"][gpu]
 

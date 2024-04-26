@@ -31,6 +31,7 @@ class PlacementGavel(Placement):
         gpu_df: pd.DataFrame,
         **kwargs,
     ) -> dict:
+        time = kwargs["time"]
 
         # TODO this implementation of gavel placement appears to be out of date
         # we get errors right off the bat, suggesting the infrastructure of blox
@@ -56,7 +57,7 @@ class PlacementGavel(Placement):
         # Get the GPU throuputs into a nice dataframe
         for job in active_jobs.keys():
             if job not in self.throughputs.columns:
-                self.throughputs[job] = num_gpu_types * [0]
+                self.throughputs[job] = num_gpu_types * [0.0]
                 for gpu in self.throughputs.index:
                     self.throughputs[job][gpu] = active_jobs[job]["gpu_tputs"][gpu]
 

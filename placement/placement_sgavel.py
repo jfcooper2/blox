@@ -57,7 +57,7 @@ class PlacementSGavel(Placement):
         # Get the GPU throuputs into a nice dataframe
         for job in active_jobs.keys():
             if job not in self.throughputs.columns:
-                self.throughputs[job] = num_gpu_types * [0]
+                self.throughputs[job] = num_gpu_types * [0.0]
                 for gpu in self.throughputs.index:
                     self.throughputs[job][gpu] = active_jobs[job]["gpu_tputs"][gpu]
 
@@ -83,7 +83,7 @@ class PlacementSGavel(Placement):
         job_names = curr_throughputs.columns
         gpu_names = curr_throughputs.index
 
-        job_priorities = [(curr_priorities[i][j] * np.sum(curr_rounds_received.values[i]) / curr_rounds_received.values[i][j], (job_name, gpu_name)) for i, job_name in enumerate(job_names) for j, gpu_name in enumerate(gpu_names)]
+        job_priorities = [(curr_priorities[i][j] - curr_rounds_received.values[i][j] / np.sum(curr_rounds_received.values[i]), (job_name, gpu_name)) for i, job_name in enumerate(job_names) for j, gpu_name in enumerate(gpu_names)]
         job_priorities.sort(key=lambda x: -x[0]) # Sort by priority
 
         if self.rounds_scheduled % 5 == 0:
