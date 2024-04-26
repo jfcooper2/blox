@@ -100,6 +100,9 @@ class Job:
         self.lease_extended = False
         self.job_command = None
 
+        self.swap_count = 0
+        self.swap_record = []
+
         self.gpu_tputs = collections.defaultdict(lambda x: 1)
         for k, v in gpu_tputs.items():
             self.gpu_tputs[k] = v

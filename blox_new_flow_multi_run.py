@@ -50,6 +50,8 @@ def main(args):
                 placement_policy = placement.PlacementDefault(args)
             elif args.placement_name == "Gavel":
                 placement_policy = placement.PlacementGavel(args)
+            elif args.placement_name == "SGavel":
+                placement_policy = placement.PlacementSGavel(args)
             elif args.placement_name == "Greedy":
                 placement_policy = placement.PlacementGreedy(args)
             elif args.placement_name == "Best":
@@ -123,7 +125,7 @@ def main(args):
 
                 # Job Placement
                 to_suspend, to_launch = placement_policy.place(
-                    job_state, cluster_state, new_job_schedule
+                    job_state, cluster_state, new_job_schedule, time=job_state.time
                 )
 
                 # collecting custom metrics
@@ -136,6 +138,7 @@ def main(args):
                     simulator_time += args.round_duration
                     blox_mgr.time += args.round_duration
                     job_state.time += args.round_duration
+                    cluster_state.time += args.round_duration
                     # admission_policy.bltime += args.round_duration
 
 def parse_args(parser):

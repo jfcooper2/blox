@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import cvxpy as cp
 
-class PlacementGavel(Placement):
+class PlacementSGavel(Placement):
     """
     Implements Gavel placement policy
     """
@@ -31,6 +31,7 @@ class PlacementGavel(Placement):
         gpu_df: pd.DataFrame,
         **kwargs,
     ) -> dict:
+        time = kwargs["time"]
 
         # TODO this implementation of gavel placement appears to be out of date
         # we get errors right off the bat, suggesting the infrastructure of blox
@@ -82,7 +83,7 @@ class PlacementGavel(Placement):
         job_names = curr_throughputs.columns
         gpu_names = curr_throughputs.index
 
-        job_priorities = [(curr_priorities[i][j] / curr_rounds_received.values[i][j], (job_name, gpu_name)) for i, job_name in enumerate(job_names) for j, gpu_name in enumerate(gpu_names)]
+        job_priorities = [(curr_priorities[i][j] * np.sum(curr_rounds_received.values[i]) / curr_rounds_received.values[i][j], (job_name, gpu_name)) for i, job_name in enumerate(job_names) for j, gpu_name in enumerate(gpu_names)]
         job_priorities.sort(key=lambda x: -x[0]) # Sort by priority
 
         if self.rounds_scheduled % 5 == 0:

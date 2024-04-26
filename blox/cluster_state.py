@@ -6,6 +6,7 @@ import json
 import logging
 import argparse
 import pandas as pd
+import numpy as np
 import time
 from concurrent import futures
 from itertools import cycle
@@ -47,6 +48,7 @@ class ClusterState(object):
         )
         self.time = 0
         self.cluster_stats = dict()
+        self.cluster_stats["utilization"] = []
 
     # def get_new_nodes(self):
     # """
@@ -104,6 +106,7 @@ class ClusterState(object):
         """
         # getting new updates
         # new_nodes = self.blr.rmserver.get_new_nodes()
+        self.cluster_stats["utilization"].append((self.time, np.sum(self.gpu_df["IN_USE"])))
 
         if len(new_nodes) > 0:
             self._add_new_machines(new_nodes)

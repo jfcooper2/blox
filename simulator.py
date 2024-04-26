@@ -442,7 +442,7 @@ def launch_server(args) -> grpc.Server:
     simulator_pb2_grpc.add_SimServerServicer_to_server(
         SimulatorRunner(
             cluster_job_log=args.cluster_job_log,
-            list_jobs_per_hour=[50],
+            list_jobs_per_hour=[10],
             # list_jobs_per_hour=np.arange(10, 11, 1.0).tolist(),
             job_ids_to_track=(args.start_job_track, args.end_job_track),
             schedulers=[args.scheduler],

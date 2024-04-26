@@ -31,7 +31,7 @@ class PlacementBest(Placement):
         gpu_df: pd.DataFrame,
         **kwargs,
     ) -> dict:
-
+        
         # TODO this implementation of gavel placement appears to be out of date
         # we get errors right off the bat, suggesting the infrastructure of blox
         # may have changed
@@ -113,7 +113,7 @@ class PlacementBest(Placement):
             # check if job has already placed
             # if so, ignore it and move on to the next tuple
             if job_id in placed_jobs:
-                print(f'We have already placed {job_id}')
+                #print(f'We have already placed {job_id}')
                 continue
 
             job = active_jobs[job_id]
@@ -122,6 +122,7 @@ class PlacementBest(Placement):
                 if job["running_accel"] == gpu_preference:
                     # nothing to do here
                     placed_jobs.add(job_id)
+                    launched_job_ids.append(job_id)
                     
                     # bookkeeping
                     self.rounds_received[job_id][gpu_preference] += 1
@@ -129,10 +130,13 @@ class PlacementBest(Placement):
                 else:
                     # need to terminate this job trying to launch on
                     # different accelerator
+                    print("-------------- SWAPPING ----------------")
+                    print("off of", job["running_accel"])
                     jobs_to_terminate.append(job_id)
                     job["is_running"] = False
+                    job["swap_record"].append((time, job["running_accel"], gpu_preference))
+                    job["swap_count"] += 1
                     delete_job_by_id(gpu_df, job_id)
-                    print("-------------- SWAPPING ----------------")
                     self.swap_count += 1
 
             if job_id in launched_job_ids:
